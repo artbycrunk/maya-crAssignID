@@ -1,0 +1,223 @@
+/* *******************************
+*******************************
+
+crAssignID 1.0
+
+Created On October 20th 2008
+Authored By - Crunk AKA Savio Fernandes
+www.artbycrunk.com/blog/scripts/
+
+Install & Execute:
+-Copy this file to your maya default script directory
+-Source "crAssignID.mel"
+
+Description:
+This scripts basically assigns all the objects or selected objects in the scene an miLabel attribute.
+It can basically assign the id based on object number or based on same shader configurations.
+It can also assign the objects with custom ids, for various other purposes.
+
+*******************************
+********************************** */
+
+
+global proc crAssignID()
+{
+	if (`window -q -ex AssnID`) deleteUI AssnID;
+
+	window -title "AssignID" -w 326 -h 160 -s false AssnID ;
+	columnLayout -adjustableColumn true;
+	separator sep1;
+	separator sep2;
+	string $radio_id = `radioButtonGrp -numberOfRadioButtons 3 -cw4 80 80 80 80 -l "ID Type" -labelArray3 "MaterialID" "ObjectID" "CustomID" radioBX_1`;
+	separator sep3;
+	string $radio_obj = `radioButtonGrp -numberOfRadioButtons 2 -cw3 160 80 80 -l "Work on Objects" -labelArray2 "Selected" "All" radioBX_2`;
+	separator sep4;
+	string $idrange_field = `intFieldGrp -numberOfFields 1 -l "Start ID:" -value1 0 idrange_field`;
+	separator sep5;
+	separator sep6;
+	string $assign =`button -l "AssignID" -h 40 -c("Assign") but_assign`;
+	string $about =`button -l "About/Usage" -h 20 -c("AboutAssnID") but_about`;
+	setParent ..;
+	showWindow AssnID;
+}
+
+global proc Assign()
+{
+	string $id = `radioButtonGrp -q -sl radioBX_1`;
+
+	int $currid = `intFieldGrp -q -value1 idrange_field`;
+	if ($currid == 0){
+		$currid = 1;
+	}
+	$attrib = "miLabel";
+
+	switch ($id){
+
+		case "1":
+			string $shaderSG[] ={};
+			if (`radioButtonGrp -q -sl radioBX_2` == 2){
+				select -r -ne "*SG";
+				string $shaderSG2[] = `ls -sl`;
+				$sizeval = size($shaderSG2);
+				appendStringArray($shaderSG, $shaderSG2, $sizeval);
+
+			}else if(`radioButtonGrp -q -sl radioBX_2` == 1){
+				string $selected[] = `ls -sl`;
+				for ($i=0;$i<size($selected);$i++){
+					string $listmat[] = `listConnections -d 1 -t "shadingEngine" $selected[$i]`;
+					$sizeval = size($listmat);
+					appendStringArray($shaderSG, $listmat, $sizeval);
+				}
+			}
+
+			select -cl;
+			int $startid = $currid;
+			int $endid = 0;
+			for ($i=0;$i<size($shaderSG);$i++){
+				string $list[] = `listConnections -d 0 -t "mesh" $shaderSG[$i]`;
+
+				for ($s=0;$s<size($list);$s++){
+					if(`attributeExists "miLabel" $list[$s]`){
+						if(`editRenderLayerGlobals -q -currentRenderLayer` != "defaultRenderLayer"){
+							string $layer = "editRenderLayerAdjustment" + " " + "\"" + $list[$s] +"."+ $attrib +"\"" + ";" ;
+							eval($layer);
+						}
+						setAttr ($list[$s]+".miLabel") ($i+$currid);
+					}else{
+						addAttr -ln miLabel -at long -k 1 $list[$s];
+						if(`editRenderLayerGlobals -q -currentRenderLayer` != "defaultRenderLayer"){
+							string $layer = "editRenderLayerAdjustment" + " " + "\"" + $list[$s] +"."+ $attrib +"\"" + ";" ;
+							eval($layer);
+						}
+						setAttr ($list[$s]+".miLabel") ($i+$currid);
+					}
+				$endid = $i;
+				}
+			}
+			print ("Material_Ids Added Between " + $startid + " to " + ($endid+$currid));
+
+	break;
+
+	case "2":
+		string $objShapes[] = {};
+		if (`radioButtonGrp -q -sl radioBX_2` == 2){
+			// All
+			select -r -ne "*";
+			string $objShapes2[] = `ls -sl -type geometryShape`;
+			$sizeval = size($objShapes2);
+			appendStringArray($objShapes, $objShapes2, $sizeval);
+
+		}else if(`radioButtonGrp -q -sl radioBX_2` == 1){
+			// selected
+			pickWalk -d down;
+			string $objShapes2[] = `ls -sl -type geometryShape`;
+			select -cl;
+			$sizeval = size($objShapes2);
+			appendStringArray($objShapes, $objShapes2, $sizeval);
+		}
+
+		if (size($objShapes) == 0){
+			error "No Geometry Selected";
+			break;
+		}else{
+			int $startid = $currid;
+			int $endid = 0;
+			print $objShapes;
+
+			for ($j=0;$j<size($objShapes);$j++){
+				string $objname = substituteAllString($objShapes[$j], "Shape", "");
+				string $objType = `objectType $objname`;
+
+				if ($objType == "transform"){
+					if(`attributeExists "miLabel" $objname`){
+						if(`editRenderLayerGlobals -q -currentRenderLayer` != "defaultRenderLayer"){
+							string $layer = "editRenderLayerAdjustment" + " " + "\"" + $objname +"."+ $attrib +"\"" + ";" ;
+							eval($layer);
+						}
+						setAttr ($objname+".miLabel") ($j+$currid);
+					}else{
+						addAttr -ln miLabel -at long -k 1 $objname;
+						if(`editRenderLayerGlobals -q -currentRenderLayer` != "defaultRenderLayer"){
+							string $layer = "editRenderLayerAdjustment" + " " + "\"" + $objname +"."+ $attrib +"\"" + ";" ;
+							eval($layer);
+						}
+						setAttr ($objname+".miLabel") ($j+$currid);
+					}
+					$endid++;
+				}
+			}
+			print ("Object_Ids Added Between " + $startid + " to " + ($endid+$currid));
+		}
+
+	break;
+
+	case "3":
+		string $objShapes[] = {};
+		if (`radioButtonGrp -q -sl radioBX_2` == 2){
+			// All
+			select -r -ne "*";
+			string $objShapes2[] = `ls -sl -type geometryShape`;
+			$sizeval = size($objShapes2);
+			appendStringArray($objShapes, $objShapes2, $sizeval);
+		}
+		else if(`radioButtonGrp -q -sl radioBX_2` == 1){
+			// selected
+			pickWalk -d down;
+			string $objShapes2[] = `ls -sl -type geometryShape`;
+			select -cl;
+			$sizeval = size($objShapes2);
+			appendStringArray($objShapes, $objShapes2, $sizeval);
+		}
+
+		if (size($objShapes) == 0){
+			error "No Geometry Selected";
+			break;
+		}else{
+			int $startid = $currid;
+			int $endid = 0;
+			print $objShapes;
+			for ($j=0;$j<size($objShapes);$j++){
+				string $objname = substituteAllString($objShapes[$j], "Shape", "");
+				string $objType = `objectType $objname`;
+
+				if ($objType == "transform"){
+					if(`attributeExists "miLabel" $objname`){
+						if(`editRenderLayerGlobals -q -currentRenderLayer` != "defaultRenderLayer"){
+							string $layer = "editRenderLayerAdjustment" + " " + "\"" + $objname +"."+ $attrib +"\"" + ";" ;
+							eval($layer);
+						}
+						setAttr ($objname+".miLabel") ($currid);
+					}else{
+						addAttr -ln miLabel -at long -k 1 $objname;
+						if(`editRenderLayerGlobals -q -currentRenderLayer` != "defaultRenderLayer"){
+							string $layer = "editRenderLayerAdjustment" + " " + "\"" + $objname +"."+ $attrib +"\"" + ";" ;
+							eval($layer);
+						}
+						setAttr ($objname+".miLabel") ($currid);
+					}
+				$endid++;
+				}
+			}
+			print ("Object_Id Added Between " + $startid + " to " + $currid + " for " + $endid + " Object(s)");
+		}
+	break;
+
+}
+
+}
+
+global proc AboutAssnID()
+{
+	string $aboutwindow = `window -title "AssignID 1.0" -iconName "Short Name" -s false -widthHeight 480 267 -sizeable 1 AboutAssnID`;
+	columnLayout -adjustableColumn true;
+	text -label "AssignID 1.0";
+	text -label "Created by Crunk";
+	button -label "www.artbycrunk.com\blog" -c ("showHelp -a \"mailto:artbycrunk@gmail.com\"; ");
+	text -label "";
+	button -label "Close" -command ("deleteUI -window " + $aboutwindow);
+	setParent ..;
+	showWindow $aboutwindow;
+
+}
+
+crAssignID;
