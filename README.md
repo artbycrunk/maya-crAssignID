@@ -1,4 +1,10 @@
 # maya-crAssignID
+
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)]()
+[![](https://img.shields.io/badge/TWITTER-%40artbycrunk-blue.svg?logo=twitter&style=flat)](https://twitter.com/artbycrunk)
+[![Average time to resolve an issue](https://isitmaintained.com/badge/resolution/artbycrunk/maya-crAssignID.svg)](https://isitmaintained.com/project/artbycrunk/maya-crAssignID "Average time to resolve an issue")
+[![Percentage of issues still open](https://isitmaintained.com/badge/open/artbycrunk/maya-crAssignID.svg)](https://isitmaintained.com/project/artbycrunk/maya-crAssignID "Percentage of issues still open")
+
 A useful little script for giving objects in a maya scene id numbers (miLabel). 
 
 ![crassignid_screen01][header]
